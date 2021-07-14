@@ -550,10 +550,7 @@ class ClassificationHead(nn.Module):
 
 
     def forward(self, query, support, support_labels, n_way, n_shot, **kwargs):
-        if self.enable_scale:
             return self.scale * self.head(query, support, support_labels, n_way, n_shot, **kwargs)
-        elif self.enable_scale: 
-            return self.scale*self.head(query, support, support_labels, n_way, n_shot, **kwargs)
 
 
 

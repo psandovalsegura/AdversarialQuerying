@@ -115,3 +115,12 @@ def AttackPGDFeatureExtractor(attack, embedding_net, cls_head, config, data_quer
         x = torch.min(torch.max(x, data_query - config['epsilon']), data_query + config['epsilon'])
         x = torch.clamp(x, 0.0, 1.0)
     return x
+
+def AttackRandom(attack, config, data_query):
+    if not attack:
+        return data_query
+
+    x = data_query.detach()
+    x = x + torch.zeros_like(x).uniform_(-config['epsilon'], config['epsilon'])
+    x = torch.clamp(x, 0.0, 1.0)
+    return x

@@ -27,7 +27,7 @@ from pdb import set_trace as breakpoint
 
 
 # Set the appropriate paths of the datasets here.
-_MINI_IMAGENET_DATASET_DIR = '../Few-shot-datasets/Mini-ImageNet'
+_MINI_IMAGENET_DATASET_DIR = '/vulcanscratch/psando/Few-shot-datasets/MiniImagenet'
 
 def buildLabelIndex(labels):
     label2inds = {}

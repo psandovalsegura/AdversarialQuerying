@@ -230,8 +230,6 @@ if __name__ == '__main__':
             emb_support = emb_support.reshape(opt.episodes_per_batch, train_n_support, -1)
             data_query_adv = AttackPGD(opt.attack_embedding, embedding_net, cls_head, config, data_query, emb_support, labels_query, labels_support, opt.train_way, opt.train_shot, opt.head, opt.episodes_per_batch, train_n_query)
 
-
-
             emb_query = embedding_net(data_query_adv.reshape([-1] + list(data_query.shape[-3:])))
             emb_query = emb_query.reshape(opt.episodes_per_batch, train_n_query, -1)
 

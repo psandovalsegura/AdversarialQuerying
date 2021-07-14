@@ -15,7 +15,7 @@ from models.ResNet12_embedding import resnet12
 
 from models.classification_heads import ClassificationHead
 
-from utils import pprint, set_gpu, Timer, count_accuracy, log, AttackPGD
+from utils import AttackRandom, pprint, set_gpu, Timer, count_accuracy, log, AttackPGD, AttackRandom
 
 import numpy as np
 import os
@@ -78,8 +78,8 @@ def get_dataset(options):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpu', default='0')
-    parser.add_argument('--load', default='./experiments/exp_1/best_model.pth',
-                            help='path of the checkpoint file')
+    parser.add_argument('--load', default='/vulcanscratch/psando/checkpoints-meta/official-aq-proto-mi/',
+                            help='path of the checkpoint directory')
     parser.add_argument('--episode', type=int, default=1000,
                             help='number of episodes to test')
     parser.add_argument('--way', type=int, default=5,
@@ -106,6 +106,8 @@ if __name__ == '__main__':
                             help='used targeted attacks')
     parser.add_argument('--activation', type=str, default='LeakyReLU',
                             help='choose which activation function to use. only implemented for R2D2 and ProtoNet')
+    parser.add_argument('--attack_with_random', action='store_true',
+                            help='use random vector perturbations?')
 
     opt = parser.parse_args()
 
@@ -153,7 +155,10 @@ if __name__ == '__main__':
         emb_support = embedding_net(data_support.reshape([-1] + list(data_support.shape[-3:])))
         emb_support = emb_support.reshape(1, n_support, -1)
 
-        data_query_adv = AttackPGD(opt.attack_embedding, embedding_net, cls_head, config, data_query, emb_support, labels_query, labels_support, opt.way, opt.shot, opt.head, 1, n_query)
+        if opt.attack_with_random:
+            data_query_adv = AttackRandom(opt.attack_embedding, config, data_query)
+        else:
+            data_query_adv = AttackPGD(opt.attack_embedding, embedding_net, cls_head, config, data_query, emb_support, labels_query, labels_support, opt.way, opt.shot, opt.head, 1, n_query)
 
         emb_query = embedding_net(data_query_adv.reshape([-1] + list(data_query.shape[-3:])))
         emb_query = emb_query.reshape(1, n_query, -1)
