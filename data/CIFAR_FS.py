@@ -27,7 +27,7 @@ from pdb import set_trace as breakpoint
 
 
 # Set the appropriate paths of the datasets here.
-_CIFAR_FS_DATASET_DIR = '../Few-shot-datasets/CIFAR-FS'
+_CIFAR_FS_DATASET_DIR = '/vulcanscratch/psando/Few-shot-datasets/CIFAR-FS'
 
 def buildLabelIndex(labels):
     label2inds = {}

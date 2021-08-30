@@ -42,7 +42,7 @@ def get_model(options):
     elif options.network == 'ResNet':
         if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
             network = resnet12(avg_pool=False, drop_rate=0.1, dropblock_size=5).cuda()
-            network = torch.nn.DataParallel(network, device_ids=[0, 1, 2, 3])
+            network = torch.nn.DataParallel(network)
         else:
             network = resnet12(avg_pool=False, drop_rate=0.1, dropblock_size=2).cuda()
     else:
@@ -140,7 +140,8 @@ if __name__ == '__main__':
                             help='coef for second term of trades loss')
     parser.add_argument('--activation', type=str, default='LeakyReLU',
                             help='choose which activation function to use. only implemented for R2D2 and ProtoNet')
-
+    parser.add_argument('--disable_tqdm', action='store_true',
+                            help='disables tqdm progress bar')
     opt = parser.parse_args()
 
     (dataset_train, dataset_val, data_loader) = get_dataset(opt)
@@ -220,7 +221,7 @@ if __name__ == '__main__':
         train_accuracies = []
         train_losses = []
 
-        for i, batch in enumerate(tqdm(dloader_train(epoch)), 1):
+        for i, batch in enumerate(tqdm(dloader_train(epoch), disable=opt.disable_tqdm), 1):
             data_support, labels_support, data_query, labels_query, _, _ = [x.cuda() for x in batch]
 
             train_n_support = opt.train_way * opt.train_shot

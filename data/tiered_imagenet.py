@@ -27,7 +27,7 @@ from pdb import set_trace as breakpoint
 
 
 # Set the appropriate paths of the datasets here.
-_TIERED_IMAGENET_DATASET_DIR = '../Few-shot-datasets/Tiered-ImageNet'
+_TIERED_IMAGENET_DATASET_DIR = '/vulcanscratch/psando/Few-shot-datasets/Tiered-ImageNet'
 
 def buildLabelIndex(labels):
     label2inds = {}

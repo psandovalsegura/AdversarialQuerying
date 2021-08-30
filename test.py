@@ -2,11 +2,6 @@
 import argparse
 
 import torch
-import torch.nn.functional as F
-from torch.utils.data import DataLoader
-
-from torch.autograd import Variable
-
 from tqdm import tqdm
 
 from models.protonet_embedding import ProtoNetEmbedding
@@ -15,7 +10,7 @@ from models.ResNet12_embedding import resnet12
 
 from models.classification_heads import ClassificationHead
 
-from utils import AttackRandom, pprint, set_gpu, Timer, count_accuracy, log, AttackPGD, AttackRandom
+from utils import pprint, set_gpu, Timer, count_accuracy, log, AttackPGD, AttackRandom
 
 import numpy as np
 import os
@@ -37,13 +32,13 @@ def get_model(options):
         assert(False)
         
     # Choose the classification head
-    if opt.head == 'ProtoNet':
+    if options.head == 'ProtoNet':
         cls_head = ClassificationHead(base_learner='ProtoNet').cuda()    
-    elif opt.head == 'Ridge':
+    elif options.head == 'Ridge':
         cls_head = ClassificationHead(base_learner='Ridge').cuda()
-    elif opt.head == 'R2D2':
+    elif options.head == 'R2D2':
         cls_head = ClassificationHead(base_learner='R2D2').cuda()
-    elif opt.head == 'SVM':
+    elif options.head == 'SVM':
         cls_head = ClassificationHead(base_learner='SVM-CS').cuda()
     else:
         print ("Cannot recognize the classification head type")
@@ -135,6 +130,10 @@ if __name__ == '__main__':
 
     set_gpu(opt.gpu)
 
+    log_file_path = os.path.join(opt.load, "test_log.txt")
+    log(log_file_path, str(vars(opt)))
+    log(log_file_path, 'Attack at test time: {}'.format(opt.attack_embedding))
+
     # Define the models
     (embedding_net, cls_head) = get_model(opt)
     
@@ -144,6 +143,7 @@ if __name__ == '__main__':
     embedding_net.eval()
     cls_head.load_state_dict(saved_models['head'])
     cls_head.eval()
+
     # Evaluate on test set
     test_accuracies = []
     for i, batch in enumerate(tqdm(dloader_test()), 1):
@@ -175,9 +175,7 @@ if __name__ == '__main__':
         std = np.std(np.array(test_accuracies))
         ci95 = 1.96 * std / np.sqrt(i + 1)
         
-        if i % 50 == 0:
-            print('Episode [{}/{}]:\t\t\tAccuracy: {:.2f} ± {:.2f} % ({:.2f} %)'\
+        if i % 100 == 0:
+            log(log_file_path, 'Episode [{}/{}]:\t\t\tAccuracy: {:.2f} ± {:.2f} % ({:.2f} %)'\
                   .format(i, opt.episode, avg, ci95, acc))
-    f = open(opt.load+'/attack='+str(opt.attack_embedding)+'_eval_text.txt', 'w+')
-    f.write('model: '+opt.load+', acc: '+str(np.mean(np.array(test_accuracies))))
-    f.close()
+
