@@ -131,4 +131,6 @@ dmypy.json
 # Other
 *.out
 slurm_logs/
-scripts/*
+scripts/domain_transfer/*
+scripts/metaoptnet/*
+scripts/protonet/*

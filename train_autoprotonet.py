@@ -12,6 +12,7 @@ from torch.autograd import Variable
 from models.classification_heads import ClassificationHead
 from models.R2D2_embedding import R2D2Embedding
 from models.protonet_embedding import ProtoNetEmbedding
+from models.autoprotonet import AutoProtoNetEmbedding
 from models.ResNet12_embedding import resnet12
 
 from utils import set_gpu, Timer, count_accuracy, check_dir, log, AttackPGD
@@ -37,6 +38,9 @@ def get_model(options):
     # Choose the embedding network
     if options.network == 'ProtoNet':
         network = ProtoNetEmbedding(activation = options.activation).cuda()
+    elif options.network == 'AutoProtoNet':
+        is_miniimagenet = options.dataset == 'miniImageNet'
+        network = AutoProtoNetEmbedding(activation = options.activation, is_miniimagenet=is_miniimagenet).cuda()
     elif options.network == 'R2D2':
         network = R2D2Embedding(denoise = options.denoise, activation=options.activation).cuda()
     elif options.network == 'ResNet':
@@ -46,7 +50,7 @@ def get_model(options):
         else:
             network = resnet12(avg_pool=False, drop_rate=0.1, dropblock_size=2).cuda()
     else:
-        print ("Cannot recognize the network type")
+        print ("Cannot recognize the network type {}")
         assert(False)
         
     # Choose the classification head
@@ -142,6 +146,8 @@ if __name__ == '__main__':
                             help='choose which activation function to use. only implemented for R2D2 and ProtoNet')
     parser.add_argument('--disable_tqdm', action='store_true',
                             help='disables tqdm progress bar')
+    parser.add_argument('--lambda_r', type=float, default=1.0,
+                        help='constant controlling weight of reconstruction loss')
     opt = parser.parse_args()
 
     (dataset_train, dataset_val, data_loader) = get_dataset(opt)
@@ -223,17 +229,21 @@ if __name__ == '__main__':
 
         for i, batch in enumerate(tqdm(dloader_train(epoch), disable=opt.disable_tqdm), 1):
             data_support, labels_support, data_query, labels_query, _, _ = [x.cuda() for x in batch]
+            # print('data_support shape', data_support.shape)
+            # print('data_query shape', data_query.shape)
 
             train_n_support = opt.train_way * opt.train_shot
             train_n_query = opt.train_way * opt.train_query
-
+            # print('data support being reshaped to:', [-1] + list(data_support.shape[-3:]))
             emb_support = embedding_net(data_support.reshape([-1] + list(data_support.shape[-3:])))
             emb_support = emb_support.reshape(opt.episodes_per_batch, train_n_support, -1)
             data_query_adv = AttackPGD(opt.attack_embedding, embedding_net, cls_head, config, data_query, emb_support, labels_query, labels_support, opt.train_way, opt.train_shot, opt.head, opt.episodes_per_batch, train_n_query)
 
             emb_query = embedding_net(data_query_adv.reshape([-1] + list(data_query.shape[-3:])))
+            # print('embedding net.embedding shape:', embedding_net.embedding_shape)
+            # print('emb query no reshape:', emb_query_no_reshape.shape)
             emb_query = emb_query.reshape(opt.episodes_per_batch, train_n_query, -1)
-
+            # print('emb query no reshape:', emb_query.shape)
             logit_query = cls_head(emb_query, emb_support, labels_support, opt.train_way, opt.train_shot)
 
             smoothed_one_hot = one_hot(labels_query.reshape(-1), opt.train_way)
@@ -254,6 +264,13 @@ if __name__ == '__main__':
                 log_prb = F.log_softmax(logit_query.reshape(-1, opt.train_way), dim=1)
                 loss = -(smoothed_one_hot * log_prb).sum(dim=1)
                 loss = loss.mean()
+
+            # Add reconstruction loss if the embedding network is an AutoProtoNet
+            if type(embedding_net) is AutoProtoNetEmbedding:
+                recon = embedding_net.forward_decoder(emb_query.reshape(embedding_net.embedding_shape))
+                recon_loss = opt.lambda_r * F.mse_loss(recon, data_query.reshape([-1] + list(data_query.shape[-3:])))
+                # print('recon loss: {} xent loss: {}'.format(recon_loss, loss))
+                loss = loss + recon_loss
             
             acc = count_accuracy(logit_query.reshape(-1, opt.train_way), labels_query.reshape(-1))
             
@@ -267,6 +284,8 @@ if __name__ == '__main__':
             
             optimizer.zero_grad()
             loss.backward()
+            assert torch.all(~torch.isnan(embedding_net.encoder[0].block[0].weight.grad)), 'encoder gradient is nan'
+            assert torch.all(~torch.isnan(embedding_net.decoder[0].block[0].weight.grad)), 'decoder gradient is nan'
             optimizer.step()
 
         # Evaluate on the validation split

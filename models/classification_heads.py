@@ -4,7 +4,7 @@ import sys
 import torch
 from torch.autograd import Variable
 import torch.nn as nn
-from qpth.qp import QPFunction
+# from qpth.qp import QPFunction
 
 
 def computeGramMatrix(A, B):
@@ -123,7 +123,7 @@ def MetaOptNetHead_Ridge(query, support, support_labels, n_way, n_shot, lambda_r
     #        \hat z =   argmin_z 1/2 z^T G z + e^T z
     #                 subject to Cz <= h
     # We use detach() to prevent backpropagation to fixed variables.
-    qp_sol = QPFunction(verbose=False)(G, e.detach(), C.detach(), h.detach(), dummy.detach(), dummy.detach())
+    qp_sol = None # qp_sol = QPFunction(verbose=False)(G, e.detach(), C.detach(), h.detach(), dummy.detach(), dummy.detach())
     #qp_sol = QPFunction(verbose=False)(G, e.detach(), dummy.detach(), dummy.detach(), dummy.detach(), dummy.detach())
 
     #qp_sol (n_way*tasks_per_batch, n_support)
@@ -246,7 +246,7 @@ def MetaOptNetHead_SVM_He(query, support, support_labels, n_way, n_shot, C_reg=0
     #        \hat z =   argmin_z 1/2 z^T G z + e^T z
     #                 subject to Cz <= h
     # We use detach() to prevent backpropagation to fixed variables.
-    qp_sol = QPFunction(verbose=False)(G, e.detach(), C.detach(), h.detach(), dummy.detach(), dummy.detach())
+    qp_sol = None # qp_sol = QPFunction(verbose=False)(G, e.detach(), C.detach(), h.detach(), dummy.detach(), dummy.detach())
 
     # Compute the classification score.
     compatibility = computeGramMatrix(query, support)
@@ -395,7 +395,7 @@ def MetaOptNetHead_SVM_CS(query, support, support_labels, n_way, n_shot, C_reg=0
     #        \hat z =   argmin_z 1/2 z^T G z + e^T z
     #                 subject to Cz <= h
     # We use detach() to prevent backpropagation to fixed variables.
-    qp_sol = QPFunction(verbose=False, maxIter=maxIter)(G, e.detach(), C.detach(), h.detach(), A.detach(), b.detach())
+    qp_sol = None # qp_sol = QPFunction(verbose=False, maxIter=maxIter)(G, e.detach(), C.detach(), h.detach(), A.detach(), b.detach())
 
     # Compute the classification score.
     compatibility = computeGramMatrix(support, query)
@@ -504,7 +504,7 @@ def MetaOptNetHead_SVM_WW(query, support, support_labels, n_way, n_shot, C_reg=0
     #                 subject to Cz <= h
     # We use detach() to prevent backpropagation to fixed variables.
     #qp_sol = QPFunction(verbose=False)(G, e.detach(), C.detach(), h.detach(), dummy.detach(), dummy.detach())
-    qp_sol = QPFunction(verbose=False)(G, e, C, h, dummy.detach(), dummy.detach())
+    qp_sol = None # qp_sol = QPFunction(verbose=False)(G, e, C, h, dummy.detach(), dummy.detach())
 
     # Compute the classification score.
     compatibility = computeGramMatrix(support, query) + torch.ones(tasks_per_batch, n_support, n_query).cuda()
