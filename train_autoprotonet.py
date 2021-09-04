@@ -294,7 +294,7 @@ if __name__ == '__main__':
         val_accuracies = []
         val_losses = []
         
-        for i, batch in enumerate(tqdm(dloader_val(epoch)), 1):
+        for i, batch in enumerate(tqdm(dloader_val(epoch), disable=opt.disable_tqdm), 1):
             data_support, labels_support, data_query, labels_query, _, _ = [x.cuda() for x in batch]
 
             test_n_support = opt.test_way * opt.val_shot
