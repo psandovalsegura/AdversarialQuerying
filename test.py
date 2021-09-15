@@ -4,6 +4,7 @@ import argparse
 import torch
 from tqdm import tqdm
 
+from models.autoprotonet import AutoProtoNetEmbedding
 from models.protonet_embedding import ProtoNetEmbedding
 from models.R2D2_embedding import R2D2Embedding
 from models.ResNet12_embedding import resnet12
@@ -19,8 +20,11 @@ def get_model(options):
     # Choose the embedding network
     if options.network == 'ProtoNet':
         network = ProtoNetEmbedding(activation = options.activation).cuda()
+    elif options.network == 'AutoProtoNet':
+        is_miniimagenet = options.dataset == 'miniImageNet'
+        network = AutoProtoNetEmbedding(activation = options.activation, is_miniimagenet=is_miniimagenet).cuda()
     elif options.network == 'R2D2':
-        network = R2D2Embedding(activation=options.activation).cuda()
+        network = R2D2Embedding(denoise = options.denoise, activation=options.activation).cuda()
     elif options.network == 'ResNet':
         if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
             network = resnet12(avg_pool=False, drop_rate=0.1, dropblock_size=5).cuda()
@@ -28,12 +32,12 @@ def get_model(options):
         else:
             network = resnet12(avg_pool=False, drop_rate=0.1, dropblock_size=2).cuda()
     else:
-        print ("Cannot recognize the network type")
+        print("Cannot recognize the network type")
         assert(False)
         
     # Choose the classification head
     if options.head == 'ProtoNet':
-        cls_head = ClassificationHead(base_learner='ProtoNet').cuda()    
+        cls_head = ClassificationHead(base_learner='ProtoNet').cuda()
     elif options.head == 'Ridge':
         cls_head = ClassificationHead(base_learner='Ridge').cuda()
     elif options.head == 'R2D2':
@@ -41,7 +45,7 @@ def get_model(options):
     elif options.head == 'SVM':
         cls_head = ClassificationHead(base_learner='SVM-CS').cuda()
     else:
-        print ("Cannot recognize the classification head type")
+        print ("Cannot recognize the dataset type")
         assert(False)
         
     return (network, cls_head)
@@ -85,7 +89,7 @@ if __name__ == '__main__':
                             help='number of query examples per training class')
     parser.add_argument('--network', type=str, default='R2D2',
                             help='choose which embedding network to use. ProtoNet, R2D2, ResNet')
-    parser.add_argument('--head', type=str, default='R2D2',
+    parser.add_argument('--head', type=str, default='ProtoNet',
                             help='choose which embedding network to use. ProtoNet, Ridge, R2D2, SVM')
     parser.add_argument('--dataset', type=str, default='miniImageNet',
                             help='choose which classification head to use. miniImageNet, tieredImageNet, CIFAR_FS, FC100')
@@ -138,11 +142,13 @@ if __name__ == '__main__':
     (embedding_net, cls_head) = get_model(opt)
     
     # Load saved model checkpoints
+    log(log_file_path, f"Loading {opt.load+'/best_model.pth'}")
     saved_models = torch.load(opt.load+'/best_model.pth')
     embedding_net.load_state_dict(saved_models['embedding'])
     embedding_net.eval()
-    cls_head.load_state_dict(saved_models['head'])
-    cls_head.eval()
+    if 'head' in saved_models.keys():
+        cls_head.load_state_dict(saved_models['head'])
+        cls_head.eval()
 
     # Evaluate on test set
     test_accuracies = []

@@ -148,6 +148,8 @@ if __name__ == '__main__':
                             help='disables tqdm progress bar')
     parser.add_argument('--lambda_r', type=float, default=1.0,
                         help='constant controlling weight of reconstruction loss')
+    parser.add_argument('--resume-path', default=None,
+                    help='checkpoint from which to resume training')
     opt = parser.parse_args()
 
     (dataset_train, dataset_val, data_loader) = get_dataset(opt)
@@ -197,6 +199,16 @@ if __name__ == '__main__':
     log(log_file_path, str(vars(opt)))
 
     (embedding_net, cls_head) = get_model(opt)
+
+    # Load saved model checkpoints
+    if opt.resume_path:
+        log(log_file_path, f"Starting training from checkpoint {opt.resume_path}")
+        saved_models = torch.load(opt.resume_path+'/best_model.pth')
+        embedding_net.load_state_dict(saved_models['embedding'])
+        embedding_net.eval()
+        if 'head' in saved_models.keys():
+            cls_head.load_state_dict(saved_models['head'])
+            cls_head.eval()
     
     optimizer = torch.optim.SGD([{'params': embedding_net.parameters()}, 
                                  {'params': cls_head.parameters()}], lr=0.1, momentum=0.9, \
