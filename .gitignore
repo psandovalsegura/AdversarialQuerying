@@ -140,3 +140,4 @@ case_study_imgs/*
 test_novel_task_imgs/*
 train_novel_task_imgs/*
 ImageNet*
+*.DS_Store
